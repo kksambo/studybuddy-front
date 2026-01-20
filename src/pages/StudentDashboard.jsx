@@ -32,6 +32,8 @@ import { useNavigate } from "react-router-dom";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const drawerWidth = 240;
 
@@ -39,6 +41,17 @@ export default function StudentDashboard({ setUser }) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selected, setSelected] = useState("share");
+  // Scan Notes states
+  const [scanImage, setScanImage] = useState(null);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [scanError, setScanError] = useState("");
+  // Camera states
+  const videoReff = useRef(null);
+  const canvasRef = useRef(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  // Suggested Videos Modal
+  const [videosModalOpen, setVideosModalOpen] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -77,11 +90,106 @@ export default function StudentDashboard({ setUser }) {
   const [eventEnd, setEventEnd] = useState("");
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+  const [menuChosen, setMenuChosen] = useState(false);
+
+  useEffect(() => {
+    if (chatMessages.length === 0) {
+      setChatMessages([
+        {
+          sender: "bot",
+          message:
+            "👋 Hi! I am your StudyBuddy Tutor.\n\n" +
+            "I can help you with:\n" +
+            "1️⃣ Explain a concept\n" +
+            "2️⃣ Examples & practice\n" +
+            "3️⃣ Summarise a topic\n" +
+            "4️⃣ Other\n\n" +
+            "Reply with 1, 2, 3 or 4",
+        },
+      ]);
+    }
+  }, []);
 
   const logout = () => {
     localStorage.removeItem("user");
     setUser(null);
     navigate("/login");
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      videoReff.current.srcObject = stream;
+      setCameraOpen(true);
+    } catch (err) {
+      alert("Camera access denied");
+    }
+  };
+
+  const stopCamera = () => {
+    const stream = videoReff.current?.srcObject;
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
+    setCameraOpen(false);
+  };
+  const capturePhoto = () => {
+    const video = videoReff.current;
+    const canvas = canvasRef.current;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+      const file = new File([blob], "camera-note.png", {
+        type: "image/png",
+      });
+      setScanImage(file);
+      stopCamera();
+    });
+  };
+
+  //scan handler
+
+  const scanNotesImage = async () => {
+    if (!scanImage) {
+      alert("Please select or take a photo");
+      return;
+    }
+
+    setScanLoading(true);
+    setScanResult(null);
+    setScanError("");
+
+    const formData = new FormData();
+    formData.append("image", scanImage);
+
+    try {
+      const email = user?.email || "a@a.com";
+
+      const res = await fetch(
+        `https://studybuddy-back.onrender.com/studybuddy/notes-from-handwritten-image?email=${email}`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      if (!res.ok) throw new Error("Scan failed");
+
+      const data = await res.json();
+      setScanResult(data);
+    } catch (err) {
+      console.error(err);
+      setScanError("Failed to scan notes. Please try again.");
+    } finally {
+      setScanLoading(false);
+    }
   };
 
   // Scroll chat to bottom
@@ -117,7 +225,7 @@ export default function StudentDashboard({ setUser }) {
       const userId = user?.id;
       if (!userId) return;
       const res = await fetch(
-        `https://studybuddy-back.onrender.com/notes/${userId}`
+        `https://studybuddy-back.onrender.com/notes/${userId}`,
       );
       const data = await res.json();
       setNotes(Array.isArray(data) ? data : []);
@@ -135,7 +243,7 @@ export default function StudentDashboard({ setUser }) {
     setVideos([]);
     try {
       const res = await fetch(
-        `https://studybuddy-back.onrender.com/suggest/suggested-videos/${noteId}`
+        `https://studybuddy-back.onrender.com/suggest/suggested-videos/${noteId}`,
       );
       const data = await res.json();
       setVideos(data);
@@ -165,7 +273,7 @@ export default function StudentDashboard({ setUser }) {
         {
           method: "POST",
           body: formData,
-        }
+        },
       );
       if (!res.ok) throw new Error("Upload failed");
       alert("Material uploaded successfully!");
@@ -216,7 +324,7 @@ export default function StudentDashboard({ setUser }) {
         `https://studybuddy-back.onrender.com/notes/${id}`,
         {
           method: "DELETE",
-        }
+        },
       );
       if (!res.ok) throw new Error("Delete failed");
       fetchNotes();
@@ -252,6 +360,9 @@ export default function StudentDashboard({ setUser }) {
     setChatMessages((prev) => [...prev, studentMsg]);
     const question = chatInput;
     setChatInput("");
+    if (["1", "2", "3", "4"].includes(chatInput.trim())) {
+      setMenuChosen(true);
+    }
 
     try {
       const res = await fetch(
@@ -260,7 +371,7 @@ export default function StudentDashboard({ setUser }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: "abcd", question }),
-        }
+        },
       );
       const data = await res.json();
       const botMsg = { sender: "bot", message: data.answer };
@@ -279,7 +390,7 @@ export default function StudentDashboard({ setUser }) {
       if (!userId) return;
 
       const res = await fetch(
-        `https://studybuddy-back.onrender.com/timetable/?user_id=${userId}`
+        `https://studybuddy-back.onrender.com/timetable/?user_id=${userId}`,
       );
       const data = await res.json();
 
@@ -318,7 +429,7 @@ export default function StudentDashboard({ setUser }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       if (!res.ok) throw new Error("Save failed");
@@ -448,7 +559,7 @@ export default function StudentDashboard({ setUser }) {
                         onClick={() =>
                           downloadFile(
                             `https://studybuddy-back.onrender.com/student-resources/resources/download/${pdf.id}`,
-                            pdf.title
+                            pdf.title,
                           )
                         }
                       >
@@ -535,12 +646,13 @@ export default function StudentDashboard({ setUser }) {
                       bgcolor:
                         selectedNoteId === note.id ? "#4A90E2" : "#F5A623",
                       borderRadius: 3,
-                      cursor: "pointer",
+                      // cursor: "pointer",
                     }}
-                    onClick={() => {
-                      setSelectedNoteId(note.id);
-                      fetchVideosForNote(note.id);
-                    }}
+                    // onClick={() => {
+                    //   setSelectedNoteId(note.id);
+                    //   setVideosModalOpen(true);
+                    //   fetchVideosForNote(note.id);
+                    // }}
                   >
                     <CardContent>
                       <Typography
@@ -562,11 +674,24 @@ export default function StudentDashboard({ setUser }) {
                           onClick={() =>
                             downloadFile(
                               `https://studybuddy-back.onrender.com/notes/download/${note.id}`,
-                              note.note_name
+                              note.note_name,
                             )
                           }
                         >
                           Download
+                        </Button>
+
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation(); // 🔥 VERY IMPORTANT
+                            setSelectedNoteId(note.id);
+                            setVideosModalOpen(true);
+                            fetchVideosForNote(note.id);
+                          }}
+                        >
+                          🎥 Watch Videos
                         </Button>
                         <Button
                           size="small"
@@ -588,93 +713,130 @@ export default function StudentDashboard({ setUser }) {
         </Box>
       ),
     },
+
     {
-      key: "watch",
-      title: "Watch Video",
-      icon: <PlayCircleOutlineIcon />,
+      key: "scanNotes",
+      title: "Scan Notes",
+      icon: <SchoolIcon />,
       content: (
         <Box>
           <Typography variant="h5" mb={2} sx={{ color: "#4A90E2" }}>
-            Suggested Videos for Selected Note
+            Scan Handwritten Notes
           </Typography>
-          {selectedNoteId ? (
-            loadingVideos ? (
-              <Box display="flex" justifyContent="center" mt={3}>
-                <CircularProgress />
-              </Box>
-            ) : videos.length > 0 ? (
-              <Grid container spacing={3}>
-                {videos.map((video, idx) => (
-                  <Grid
-                    item
-                    xs={12}
-                    sm={6}
-                    md={4}
-                    key={idx}
-                    onClick={() => setSelectedVideo(video)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <Card
-                      sx={{
-                        borderRadius: 3,
-                        border:
-                          selectedVideo?.url === video.url
-                            ? "2px solid #4A90E2"
-                            : "none",
-                      }}
-                    >
-                      <CardContent>
-                        <img
-                          src={video.thumbnail}
-                          alt={video.title}
-                          style={{ width: "100%", borderRadius: 5 }}
-                        />
-                        <Typography
-                          variant="subtitle1"
-                          sx={{ fontWeight: "bold", mt: 1 }}
-                        >
-                          {video.title}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            ) : (
-              <Typography>No videos found for this note</Typography>
-            )
-          ) : (
-            <Typography>
-              Please select a note to see suggested videos
-            </Typography>
-          )}
 
-          {selectedVideo && (
-            <Box ref={videoRef} mt={3}>
-              <Typography variant="h6" mb={1}>
-                Now Playing: {selectedVideo.title}
-              </Typography>
-              <Box sx={{ position: "relative", paddingTop: "56.25%" }}>
-                <iframe
-                  src={selectedVideo.url.replace("watch?v=", "embed/")}
-                  title={selectedVideo.title}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography mb={2}>
+              Take a photo using your camera or upload an image of handwritten
+              notes.
+            </Typography>
+
+            {!cameraOpen && (
+              <Box display="flex" gap={2} flexWrap="wrap">
+                <Button
+                  variant="contained"
+                  sx={{ backgroundColor: "#4A90E2" }}
+                  onClick={startCamera}
+                >
+                  Open Camera
+                </Button>
+
+                <Button variant="outlined" component="label">
+                  Upload Image
+                  <input
+                    hidden
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setScanImage(e.target.files[0])}
+                  />
+                </Button>
+              </Box>
+            )}
+
+            {cameraOpen && (
+              <Box mt={2}>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
                   style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
                     width: "100%",
-                    height: "100%",
-                    border: 0,
+                    maxHeight: 300,
                     borderRadius: 8,
                   }}
-                  allowFullScreen
                 />
+                <canvas ref={canvasRef} style={{ display: "none" }} />
+
+                <Box display="flex" gap={2} mt={2}>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={capturePhoto}
+                  >
+                    Capture
+                  </Button>
+                  <Button variant="outlined" color="error" onClick={stopCamera}>
+                    Cancel
+                  </Button>
+                </Box>
               </Box>
+            )}
+
+            {scanImage && (
+              <Box mt={2}>
+                <Typography variant="caption">
+                  Image ready for scanning
+                </Typography>
+                <Box mt={1}>
+                  <Button
+                    variant="contained"
+                    sx={{ backgroundColor: "#4A90E2" }}
+                    onClick={scanNotesImage}
+                    disabled={scanLoading}
+                  >
+                    {scanLoading ? "Scanning..." : "Scan Notes"}
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </Paper>
+
+          {scanLoading && (
+            <Box display="flex" justifyContent="center" mt={2}>
+              <CircularProgress />
             </Box>
+          )}
+
+          {scanResult?.success && (
+            <Grid container spacing={3} mt={1}>
+              <Grid item xs={12} md={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6">Extracted Text</Typography>
+                    <Typography whiteSpace="pre-line">
+                      {scanResult.extracted_text}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Card sx={{ bgcolor: "#E1F5FE" }}>
+                  <CardContent>
+                    <Typography variant="h6">Study Summary</Typography>
+                    <Box sx={{ mt: 1 }}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {scanResult.notes}
+                      </ReactMarkdown>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
           )}
         </Box>
       ),
     },
+
     {
       key: "chat",
       title: "Tutor Chatbot",
@@ -720,7 +882,7 @@ export default function StudentDashboard({ setUser }) {
               fullWidth
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Type a message..."
+              placeholder="Type 1, 2, 3 or 4 to start..."
             />
             <Button
               variant="contained"
@@ -920,6 +1082,110 @@ export default function StudentDashboard({ setUser }) {
         <Toolbar />
         {sections.find((sec) => sec.key === selected)?.content}
       </Box>
+      <Modal
+        open={videosModalOpen}
+        onClose={() => {
+          setVideosModalOpen(false);
+          setSelectedVideo(null);
+        }}
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: { xs: "95%", md: "80%" },
+            maxHeight: "90vh",
+            bgcolor: "#E1F5FE",
+            borderRadius: 3,
+            p: 3,
+            overflowY: "auto",
+          }}
+        >
+          <Typography variant="h5" mb={2} sx={{ color: "#4A90E2" }}>
+            Suggested Videos
+          </Typography>
+
+          {loadingVideos ? (
+            <Box display="flex" justifyContent="center" mt={3}>
+              <CircularProgress />
+            </Box>
+          ) : videos.length > 0 ? (
+            <Grid container spacing={3}>
+              {/* Video List */}
+              <Grid item xs={12} md={4}>
+                {videos.map((video, idx) => (
+                  <Card
+                    key={idx}
+                    sx={{
+                      mb: 2,
+                      cursor: "pointer",
+                      border:
+                        selectedVideo?.url === video.url
+                          ? "2px solid #4A90E2"
+                          : "1px solid #ccc",
+                    }}
+                    onClick={() => setSelectedVideo(video)}
+                  >
+                    <CardContent>
+                      <img
+                        src={video.thumbnail}
+                        alt={video.title}
+                        style={{ width: "100%", borderRadius: 6 }}
+                      />
+                      <Typography variant="subtitle2" mt={1}>
+                        {video.title}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Grid>
+
+              {/* Video Player */}
+              <Grid item xs={12} md={8}>
+                {selectedVideo ? (
+                  <>
+                    <Typography variant="h6" mb={1}>
+                      {selectedVideo.title}
+                    </Typography>
+                    <Box sx={{ position: "relative", paddingTop: "56.25%" }}>
+                      <iframe
+                        src={selectedVideo.url.replace("watch?v=", "embed/")}
+                        title={selectedVideo.title}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          border: 0,
+                          borderRadius: 8,
+                        }}
+                        allowFullScreen
+                      />
+                    </Box>
+                  </>
+                ) : (
+                  <Typography>Select a video to play</Typography>
+                )}
+              </Grid>
+            </Grid>
+          ) : (
+            <Typography>No suggested videos found for this note.</Typography>
+          )}
+
+          <Box mt={3} textAlign="right">
+            <Button
+              variant="contained"
+              sx={{ backgroundColor: "#4A90E2" }}
+              onClick={() => setVideosModalOpen(false)}
+            >
+              Close
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
     </Box>
   );
 }
