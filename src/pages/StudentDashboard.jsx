@@ -208,8 +208,8 @@ export default function StudentDashboard({ setUser }) {
   const fetchPdfs = async () => {
     try {
       let url =
-        "https://studybuddy-back.onrender.com/student-resources/resources";
-      if (moduleSearch) url += `/module/${moduleSearch}`;
+        "https://studybuddy-back.onrender.com/student-resources/resources/module";
+      
       const res = await fetch(url);
       const data = await res.json();
       setPdfs(Array.isArray(data) ? data : []);
@@ -519,13 +519,13 @@ export default function StudentDashboard({ setUser }) {
 
           {/* Search & Display PDFs */}
           <Box display="flex" gap={2} mb={3}>
-            <TextField
+            {/* <TextField
               label="Module Name"
               value={moduleSearch}
               onChange={(e) => setModuleSearch(e.target.value)}
               variant="outlined"
               sx={{ flex: 1 }}
-            />
+            /> */}
             <Button
               variant="contained"
               sx={{ backgroundColor: "#4A90E2" }}
