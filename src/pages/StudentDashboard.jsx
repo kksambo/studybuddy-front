@@ -518,7 +518,7 @@ export default function StudentDashboard({ setUser }) {
           </Modal>
 
           {/* Search & Display PDFs */}
-          <Box display="flex" gap={2} mb={3}>
+          {/* <Box display="flex" gap={2} mb={3}>
             {/* <TextField
               label="Module Name"
               value={moduleSearch}
@@ -533,7 +533,7 @@ export default function StudentDashboard({ setUser }) {
             >
               Search
             </Button>
-          </Box>
+          </Box> */}
 
           <Grid container spacing={3}>
             {pdfs.length > 0 ? (
