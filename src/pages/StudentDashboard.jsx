@@ -732,13 +732,13 @@ export default function StudentDashboard({ setUser }) {
 
             {!cameraOpen && (
               <Box display="flex" gap={2} flexWrap="wrap">
-                <Button
+                {/* <Button
                   variant="contained"
                   sx={{ backgroundColor: "#4A90E2" }}
                   onClick={startCamera}
                 >
                   Open Camera
-                </Button>
+                </Button> */}
 
                 <Button variant="outlined" component="label">
                   Upload Image
