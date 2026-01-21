@@ -526,13 +526,13 @@ export default function StudentDashboard({ setUser }) {
               variant="outlined"
               sx={{ flex: 1 }}
             /> */}
-            <Button
+            {/* <Button
               variant="contained"
               sx={{ backgroundColor: "#4A90E2" }}
               onClick={fetchPdfs}
             >
               Search
-            </Button>
+            </Button> */}
           </Box> */}
 
           <Grid container spacing={3}>
