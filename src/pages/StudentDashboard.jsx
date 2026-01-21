@@ -517,17 +517,6 @@ export default function StudentDashboard({ setUser }) {
             </Box>
           </Modal>
 
-          {/* Search & Display PDFs */}
-          {/* <Box display="flex" gap={2} mb={3}>
-            {/* <TextField
-              label="Module Name"
-              value={moduleSearch}
-              onChange={(e) => setModuleSearch(e.target.value)}
-              variant="outlined"
-              sx={{ flex: 1 }}
-            /> */}
-
-          </Box> */}
 
           <Grid container spacing={3}>
             {pdfs.length > 0 ? (
