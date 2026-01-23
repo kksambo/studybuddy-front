@@ -18,6 +18,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
   const [loading, setLoading] = useState(false);
+  const [grade, setGrade] = useState("");
 
   const handleRegister = async () => {
     if (!name || !email || !password || !role) {
@@ -30,8 +31,8 @@ export default function Register() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password, role }),
-        }
+          body: JSON.stringify({ name, email, password, grade, role }),
+        },
       );
 
       const data = await res.json();
@@ -145,12 +146,19 @@ export default function Register() {
             />
 
             <TextField
-              label="Email"
+              label="Phone Number"
               variant="outlined"
               fullWidth
               margin="normal"
+              type="tel"
+              placeholder="+27 123 456 7890"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              inputProps={{
+                pattern: "\\+\\d{1,3} ?\\d{1,14}(?:\\s\\d{1,13})?",
+                title:
+                  "Enter a valid phone number with country code, e.g. +27 123 456 7890",
+              }}
             />
 
             <TextField
@@ -162,6 +170,21 @@ export default function Register() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <TextField
+              select
+              label="Grade"
+              fullWidth
+              margin="normal"
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+            >
+              <MenuItem value={"7"}>Grade 7</MenuItem>
+              <MenuItem value={"8"}>Grade 8</MenuItem>
+              <MenuItem value={"9"}>Grade 9</MenuItem>
+              <MenuItem value={"10"}>Grade 10</MenuItem>
+              <MenuItem value={"11"}>Grade 11</MenuItem>
+              <MenuItem value={"12"}>Grade 12</MenuItem>
+            </TextField>
 
             <TextField
               select

@@ -35,7 +35,7 @@ export default function Login({ setUser }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
-        }
+        },
       );
 
       const data = await res.json();
@@ -146,12 +146,19 @@ export default function Login({ setUser }) {
             </Typography>
 
             <TextField
-              label="Email"
+              label="Phone Number"
               variant="outlined"
               fullWidth
               margin="normal"
+              type="tel"
+              placeholder="+27 123 456 7890"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              inputProps={{
+                pattern: "\\+\\d{1,3} ?\\d{1,14}(?:\\s\\d{1,13})?",
+                title:
+                  "Enter a valid phone number with country code, e.g. +27 123 456 7890",
+              }}
             />
             <TextField
               label="Password"

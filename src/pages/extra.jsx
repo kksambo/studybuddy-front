@@ -117,7 +117,7 @@ export default function StudentDashboard({ setUser }) {
       const userId = user?.id;
       if (!userId) return;
       const res = await fetch(
-        `https://studybuddy-back.onrender.com/notes/${userId}`
+        `https://studybuddy-back.onrender.com/notes/${userId}`,
       );
       const data = await res.json();
       setNotes(Array.isArray(data) ? data : []);
@@ -135,7 +135,7 @@ export default function StudentDashboard({ setUser }) {
     setVideos([]);
     try {
       const res = await fetch(
-        `https://studybuddy-back.onrender.com/suggest/suggested-videos/${noteId}`
+        `https://studybuddy-back.onrender.com/suggest/suggested-videos/${noteId}`,
       );
       const data = await res.json();
       setVideos(data);
@@ -165,7 +165,7 @@ export default function StudentDashboard({ setUser }) {
         {
           method: "POST",
           body: formData,
-        }
+        },
       );
       if (!res.ok) throw new Error("Upload failed");
       alert("Material uploaded successfully!");
@@ -216,7 +216,7 @@ export default function StudentDashboard({ setUser }) {
         `https://studybuddy-back.onrender.com/notes/${id}`,
         {
           method: "DELETE",
-        }
+        },
       );
       if (!res.ok) throw new Error("Delete failed");
       fetchNotes();
@@ -260,7 +260,7 @@ export default function StudentDashboard({ setUser }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: "abcd", question }),
-        }
+        },
       );
       const data = await res.json();
       const botMsg = { sender: "bot", message: data.answer };
@@ -279,7 +279,7 @@ export default function StudentDashboard({ setUser }) {
       if (!userId) return;
 
       const res = await fetch(
-        `https://studybuddy-back.onrender.com/timetable/?user_id=${userId}`
+        `https://studybuddy-back.onrender.com/timetable/?user_id=${userId}`,
       );
       const data = await res.json();
 
@@ -318,7 +318,7 @@ export default function StudentDashboard({ setUser }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       if (!res.ok) throw new Error("Save failed");
@@ -448,7 +448,7 @@ export default function StudentDashboard({ setUser }) {
                         onClick={() =>
                           downloadFile(
                             `https://studybuddy-back.onrender.com/student-resources/resources/download/${pdf.id}`,
-                            pdf.title
+                            pdf.title,
                           )
                         }
                       >
@@ -562,7 +562,7 @@ export default function StudentDashboard({ setUser }) {
                           onClick={() =>
                             downloadFile(
                               `https://studybuddy-back.onrender.com/notes/download/${note.id}`,
-                              note.note_name
+                              note.note_name,
                             )
                           }
                         >
